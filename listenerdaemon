@@ -1,0 +1,42 @@
+#!/bin/bash
+
+WORK_DIR="/root"
+DAEMON="/usr/bin/python"
+ARGS="/root/listenerdaemon.py"
+PIDFILE="/var/run/listenerdaemon.pid"
+USER="root"
+
+case "$1" in
+  start)
+    echo "Starting cloud environment listener"
+    /sbin/start-stop-daemon --start --pidfile $PIDFILE \
+        --user $USER --group $USER \
+        -b --make-pidfile \
+        --chuid $USER \
+        --exec $DAEMON $ARGS start
+    echo "Started."
+    ;;
+  stop)
+    echo "Stopping cloud environment listener"
+    #/sbin/start-stop-daemon --stop --pidfile $PIDFILE --verbose
+    $DAEMON $ARGS stop
+    echo "Stopped."
+    ;;
+  restart)
+    echo "Stopping cloud environment listener"
+    $DAEMON $ARGS stop
+    echo "Restarting cloud environment listener"
+    /sbin/start-stop-daemon --start --pidfile $PIDFILE \
+        --user $USER --group $USER \
+        -b --make-pidfile \
+        --chuid $USER \
+        --exec $DAEMON $ARGS start
+    echo "Done."
+    ;;
+  *)
+    echo "Usage: /etc/init.d/$USER {start|stop|restart}"
+    exit 1
+    ;;
+esac
+
+exit 0
