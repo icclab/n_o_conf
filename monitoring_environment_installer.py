@@ -8,7 +8,7 @@ import keystoneclient.v2_0.client as ksclient
 from novaclient import client as noclient
 import neutronclient.client as neclient
 import configparser, time, os, copy, csv, json
-import vm_control
+import vm_control, nagios_preparer
 
 from fabric.api import env, execute, task, put, get, sudo
 import cuisine
@@ -48,12 +48,21 @@ def chmod_file(chmod, remote_location):
     cuisine.run(command, shell=False)
 
 @task
-def run_python_program(program=None, sudo=False):
+def run_python_program(program=None, use_sudo=False):
     cuisine.file_ensure('/usr/bin/python')
-    if sudo:
+    if use_sudo:
         cuisine.sudo(('/usr/bin/python %s' % program))
     else:
         cuisine.run(('/usr/bin/python %s' % program))
+        
+@task
+def service_ctl(service='listenerdaemon', command='start', use_sudo=False):
+    cuisine.file_ensure(('/etc/init.d/%s' % service))
+    cmd = str('/etc/init.d/%s %s' % (service, command))
+    if use_sudo:
+        cuisine.sudo(cmd, shell=False)
+    else:
+        cuisine.run(cmd, shell=False)
     
 def get_vm_ips(vm_data):
     return [vm.networks.values()[0][0] for vm in vm_data]
@@ -295,24 +304,27 @@ if __name__ == "__main__":
     host_list = write_ip_list(vm_list, VM_control)
     nagios_server_ip = VM_control.get_floating_ip('master')
     
+    nagios_preparer.prepare_server(nagios_server_ip)
+    
     
     env.hosts = [nagios_server_ip]
-    env.user = ssh_username
+    env.user = 'root'
     env.password = ssh_password
     env.key_filename = ssh_key_filename
     env.connection_attempts = 5
     
+    execute(update)
     
-#    install_prerequisites()
-#    execute(add_nagios_user)
-#    execute(install_nagios_from_source)
-#    execute(prepare_apache, nagios_server_user, nagios_server_password)
-#    execute(install_nagios_plugins_from_source)
-#    execute(install_nrpe_plugin_from_source)
-#    execute(start_nagios)
-#    execute(install_nagiosbpi)
-#    execute(install_nagiosgraph)
-#    
+    install_prerequisites()
+    execute(add_nagios_user)
+    execute(install_nagios_from_source)
+    execute(prepare_apache, nagios_server_user, nagios_server_password)
+    execute(install_nagios_plugins_from_source)
+    execute(install_nrpe_plugin_from_source)
+    execute(start_nagios)
+    execute(install_nagiosbpi)
+    execute(install_nagiosgraph)
+    
     execute(upload_file, '~/server_list','server_list')
     execute(upload_file, '~/.ssh/id_rsa','id_rsa')
     execute(upload_file, '~/.ssh/id_rsa.pub','id_rsa.pub')
@@ -321,8 +333,8 @@ if __name__ == "__main__":
     execute(upload_file, '~/clean_apt.py','clean_apt.py')
     execute(upload_file, '~/clientside_monitoring_environment_installer.py','clientside_monitoring_environment_installer.py')
     execute(upload_file, '~/config.ini','remote_config.ini')
-    execute(run_python_program, '~/vm_preparer.py', sudo=True)
-    execute(run_python_program, '~/clientside_monitoring_environment_installer.py', sudo=True)
+    execute(run_python_program, '~/vm_preparer.py', use_sudo=True)
+    execute(run_python_program, '~/clientside_monitoring_environment_installer.py', use_sudo=True)
     execute(upload_file, '~/client_nrpe.cfg','client_nrpe.cfg')
     execute(upload_file, '~/client_check_memory.sh','client_check_memory.sh')
     execute(upload_file, '~/vm_control.py','vm_control.py')
@@ -332,5 +344,9 @@ if __name__ == "__main__":
     execute(upload_file, '/usr/local/nagios/etc/nagios_template.cfg','nagios_template.cfg')
     execute(upload_file, '~/nagios_configuration_updater.py','nagios_configuration_updater.py')
     execute(upload_file, '~/cloud_vm_change_listener.py','cloud_vm_change_listener.py')
-#    execute(run_python_program, '~/clientside_monitoring_environment_installer.py')
+    execute(upload_file, '~/daemon.py','daemon.py')
+    execute(upload_file, '~/listenerdaemon.py','listenerdaemon.py')
+    execute(upload_file, '/etc/init.d/listenerdaemon','listenerdaemon')
+    execute(service_ctl, service='listenerdaemon', command='start')
+#    execute(run_python_program, '~/cloud_vm_change_listener.py')
         
