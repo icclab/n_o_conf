@@ -53,8 +53,8 @@ def update_new_vms(nagios_public_ip, nagios_fixed_ip):
     current_servers = json.load(open('server_list','r'), encoding='utf-8')
     new_servers = json.load(open('new_list','r'), encoding='utf-8')
     updateable_servers = calculate_delta(current_servers, new_servers)
-#    vm_preparer.prepare_machines(updateable_servers, nagios_public_ip, nagios_fixed_ip)
-#    mon_update.install_monitoring_environment(updateable_servers, nagios_public_ip, nagios_fixed_ip)
+    vm_preparer.prepare_machines(updateable_servers, nagios_public_ip, nagios_fixed_ip)
+    mon_update.install_monitoring_environment(updateable_servers, nagios_public_ip, nagios_fixed_ip)
     return updateable_servers
 
 def main():
